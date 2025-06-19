@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: "swift"
+    directory: "/"
+    schedule:
+      interval: "daily"
+
+     # default is random time
+     # time: "16:35"
+     # timezone: "America/New_York"
+
+    # default is default branch
+    # target-branch: "branch"
+
+    # Disable version updates for dependencies
+    open-pull-requests-limit: 0
+    reviewers:
+      - "Strivacity/security-reviewers"

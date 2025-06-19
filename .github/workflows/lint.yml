@@ -1,0 +1,32 @@
+name: Lint and Format code
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - run: brew install swiftlint
+
+      - run: brew install peripheryapp/periphery/periphery
+
+      - run: swiftlint lint .
+
+      - run: swiftformat --lint .
+
+      - run: .github/workflows/unused-variables.sh

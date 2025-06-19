@@ -1,0 +1,4 @@
+retain_public: true
+strict: true
+targets:
+- SdkMobileIOSNative
