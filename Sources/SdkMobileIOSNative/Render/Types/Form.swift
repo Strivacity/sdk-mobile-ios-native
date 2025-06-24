@@ -231,7 +231,9 @@ extension Widget: Decodable, Equatable {
             throw ParsingError.widget(type: type)
         }
     }
+}
 
+public extension Widget {
     var id: String {
         return switch self {
         case let .form(widget):
