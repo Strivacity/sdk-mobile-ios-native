@@ -11,10 +11,32 @@ struct SubmitView: View {
 
     let widget: SubmitWidget
 
+    let action: (() async -> Void)?
+
+    init(screen: String, formId: String, widgetId: String, widget: SubmitWidget, action: @escaping () async -> Void) {
+        self.screen = screen
+        self.formId = formId
+        self.widgetId = widgetId
+        self.widget = widget
+        self.action = action
+    }
+
+    init(screen: String, formId: String, widgetId: String, widget: SubmitWidget) {
+        self.screen = screen
+        self.formId = formId
+        self.widgetId = widgetId
+        self.widget = widget
+        self.action = nil
+    }
+
     public var body: some View {
         let button = Button {
             Task {
-                await loginController.submit(formId: formId)
+                if (action != nil) {
+                    await action?()
+                } else {
+                    await loginController.submit(formId: formId)
+                }
             }
         } label: { Text(widget.label) }
 

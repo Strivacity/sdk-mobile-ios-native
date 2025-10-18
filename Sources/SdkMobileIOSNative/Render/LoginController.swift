@@ -110,6 +110,10 @@ public class LoginController: ObservableObject {
 
         let formData = formModel?.formRequestData(formId: formId)
 
+        await submit(formId: formId, formData: formData)
+    }
+
+    func submit(formId: String, formData: [String: Any]?) async {
         do {
             try await updateScreen(screen: loginHandlerService.submitForm(formId: formId, body: formData ?? [:]))
         } catch NativeSDKError.sessionExpired {

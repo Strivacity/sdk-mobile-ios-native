@@ -155,6 +155,20 @@ if let error = error {
 
 ### Display the login view
 
+We support two different login views:
+* SDK Provided Login View
+  * This is provided by the SDK and can be customized using the `LoginView` class.
+  * Customization options:
+    * Per widget type customization
+    * Customize the layout for specific screens
+  * This mode will track server side configuration changes (e.g.: new input fields, new screens, etc.)
+* Headless
+  * This option lets you take full control over the rendering of the login view
+  * In this mode you are responsible for rendering the login view and handling the login flow based on the screens provided
+  * This mode will **not** track server side configuration changes by default (e.g.: new input fields, new screens, etc.)
+
+#### SDK Provided Login View
+
 This can be done in location (2) using the `LoginView` class.
 
 ```swift
@@ -179,6 +193,175 @@ For example:
     }
 }
 ```
+
+#### Headless
+
+For this operation mode we provide a `HeadlessAdapter` class. This class takes a delegate that will receive the screens that need to be rendered.
+
+```swift
+public protocol HeadlessAdapterDelegate: class {
+    func renderScreen(screen: Screen)
+    func refreshScreen(screen: Screen)
+}
+```
+
+The `renderScreen` method will be called when a new screen is available.
+The `refreshScreen` method will be called when a screen needs to be refreshed, for example, when there is an error message to display.
+
+Based on the screen type available in the `screen` property of the `Screen` class, you will need to render the corresponding view.
+To provide a view with an unhandled screen type, you can use the `HeadlessAdapterLoginView` class that will use the SDK Provided Login View for that specific screen type.
+
+Example usage:
+```swift
+struct LoginScreen: View {
+    @ObservedObject var loginScreenModel: LoginScreenModel
+
+    init(nativeSDK: NativeSDK) {
+        loginScreenModel = LoginScreenModel(nativeSDK: nativeSDK)
+        loginScreenModel.headlessAdapter.initialize()
+    }
+
+    var body: some View {
+        ZStack {
+            if loginScreenModel.screen == nil {
+                Text("Loading")
+            } else {
+                switch loginScreenModel.screen?.screen {
+                case "identification":
+                    IdentificationView()
+                case "password":
+                    PasswordView()
+                default:
+                    HeadlessAdapterLoginView(headlessAdapter: loginScreenModel.headlessAdapter)
+                }
+            }
+        }
+        .environmentObject(loginScreenModel)
+    }
+}
+
+class LoginScreenModel: ObservableObject, HeadlessAdapterDelegate {
+    var headlessAdapter: HeadlessAdapter!
+
+    @Published var screen: Screen?
+
+    init(nativeSDK: NativeSDK) {
+        self.headlessAdapter = HeadlessAdapter(nativeSDK: nativeSDK, delegate: self)
+    }
+
+    @MainActor
+    public func renderScreen(screen: Screen) {
+        DispatchQueue.main.async {
+            self.screen = screen
+        }
+    }
+
+    @MainActor
+    public func refreshScreen(screen: Screen) {
+        DispatchQueue.main.async {
+            self.screen = screen
+        }
+    }
+}
+```
+
+**Rendering the screens:**
+
+Information about what need to be rendered can be retrieved from the `forms` property of the `Screen` class.
+
+To check if a specific field has an error, you can use the `errorMessage` function on the `HeadlessAdapter` instance.
+```swift
+public func errorMessage(formId: String, widgetId: String) -> String?
+```
+
+To submit the form, you can use the `submit` function on the `HeadlessAdapter` instance.
+```swift
+public func submit(formId: String, data: [String: Any]?) async
+```
+
+Example for a password screen,
+Keep in mind that this is a simplified example that will not handle dynamic changes to the screen.
+
+```swift
+struct PasswordView: View {
+    @EnvironmentObject var loginScreenModel: LoginScreenModel
+
+    @State var password: String = ""
+    @State var keepMeLoggedIn: Bool = false
+
+    var identifier: String {
+        let identifierWidget = loginScreenModel
+            .screen?
+            .forms?
+            .first(where: { $0.id == "reset" })?
+            .widgets
+            .first(where: { $0.id == "identifier" })!
+
+        switch identifierWidget {
+        case .staticWidget(let widget):
+            return widget.value
+        default:
+            return ""
+        }
+    }
+
+    var body: some View {
+        VStack {
+            Text("Enter password")
+                .font(.largeTitle)
+                .bold()
+
+            HStack {
+                Text(identifier)
+                Button("Not you?") {
+                    Task {
+                        await loginScreenModel.headlessAdapter.submit(formId: "reset", data: [:])
+                    }
+                }
+            }
+
+            SecureField("Enter your password", text: $password)
+            if let error = loginScreenModel.headlessAdapter.errorMessage(formId: "password", widgetId: "password") {
+                Text(error)
+                    .foregroundColor(.red)
+            }
+
+            Toggle("Keep me logged in", isOn: $keepMeLoggedIn)
+
+            Button("Continue") {
+                Task {
+                    await loginScreenModel.headlessAdapter.submit(formId: "password", data: ["password": password, "keepMeLoggedIn": keepMeLoggedIn])
+                }
+            }.buttonStyle(.borderedProminent)
+
+            Button("Forgot your password?") {
+                Task {
+                    await loginScreenModel.headlessAdapter.submit(formId: "additionalActions/forgottenPassword", data: [:])
+                }
+            }
+
+            Button("Back to login") {
+                Task {
+                    await loginScreenModel.headlessAdapter.submit(formId: "reset", data: [:])
+                }
+            }
+
+        }
+        .onAppear {
+            keepMeLoggedIn = loginScreenModel
+                .screen?
+                .forms?
+                .first(where: { $0.id == "password" })?
+                .widgets
+                .first(where: { $0.id == "keepMeLoggedIn" })?
+                .value as? Bool ?? false
+        }
+    }
+}
+```
+
+**UIKit**
+Rendering using UIKit can be done using the `HeadlessAdapter` class. For an example, see Strivacity's `HeadlessUIKitDemo` application.
 
 ### Handling a logged-in session
 
