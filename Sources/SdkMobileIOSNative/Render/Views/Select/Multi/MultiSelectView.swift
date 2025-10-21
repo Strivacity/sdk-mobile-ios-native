@@ -10,7 +10,7 @@ struct MultiSelectView: View {
 
     let widget: MultiSelectWidget
 
-    public var body: some View {
+    var body: some View {
         var error = loginController.errorMessage(formId: formId, widgetId: widgetId) ?? ""
 
         VStack(alignment: .leading) {
@@ -33,7 +33,7 @@ struct MultiSelectView: View {
         var option: MultiSelectWidget.Option
         @Binding var selectedValues: [String?]
 
-        public var body: some View {
+        var body: some View {
             HStack {
                 Group {
                     Button {

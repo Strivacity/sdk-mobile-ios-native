@@ -26,13 +26,13 @@ struct SubmitView: View {
         self.formId = formId
         self.widgetId = widgetId
         self.widget = widget
-        self.action = nil
+        action = nil
     }
 
-    public var body: some View {
+    var body: some View {
         let button = Button {
             Task {
-                if (action != nil) {
+                if action != nil {
                     await action?()
                 } else {
                     await loginController.submit(formId: formId)

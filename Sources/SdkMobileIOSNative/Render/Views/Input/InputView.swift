@@ -10,7 +10,7 @@ struct InputView: View {
 
     let widget: InputWidget
 
-    public var body: some View {
+    var body: some View {
         var error = loginController.errorMessage(formId: formId, widgetId: widgetId) ?? ""
 
         let textContentType: UITextContentType? = switch widget.autocomplete {

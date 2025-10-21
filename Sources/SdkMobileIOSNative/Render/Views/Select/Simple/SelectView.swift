@@ -10,7 +10,7 @@ struct SelectView: View {
 
     let widget: SelectWidget
 
-    public var body: some View {
+    var body: some View {
         if widget.render.type == "dropdown" {
             if widget.options[0].type == "item" {
                 SimpleSelect(

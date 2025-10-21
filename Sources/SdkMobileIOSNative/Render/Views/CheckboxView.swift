@@ -10,7 +10,7 @@ struct CheckboxView: View {
 
     let widget: CheckboxWidget
 
-    public var body: some View {
+    var body: some View {
         var error = loginController.errorMessage(formId: formId, widgetId: widgetId) ?? ""
 
         CheckField(widget: widget,
@@ -27,7 +27,7 @@ struct CheckboxView: View {
         @State var htmlContentValue: String = ""
         @Binding var isOn: Bool
 
-        public var body: some View {
+        var body: some View {
             if widget.render.type == "checkboxShown" {
                 Toggle(isOn: $isOn) {
                     Label(widget: widget, htmlContentValue: htmlContentValue)
@@ -50,7 +50,7 @@ struct CheckboxView: View {
             var widget: CheckboxWidget
             @State var htmlContentValue: String
 
-            public var body: some View {
+            var body: some View {
                 Group {
                     if widget.render.labelType == "html" {
                         HtmlTextView(htmlContent: $htmlContentValue)

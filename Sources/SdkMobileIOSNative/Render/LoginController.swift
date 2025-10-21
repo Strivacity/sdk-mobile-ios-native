@@ -33,7 +33,7 @@ public class LoginController: ObservableObject {
             return
         }
 
-        if let hostedUrl = screen.hostedUrl, screen.forms == nil && screen.messages == nil {
+        if let hostedUrl = screen.hostedUrl, screen.forms == nil, screen.messages == nil {
             authWebView.open(
                 hostedURL: URL(string: hostedUrl)!,
                 customURIScheme: nativeSDK.redirectURI.scheme!,
@@ -44,8 +44,8 @@ public class LoginController: ObservableObject {
                 }
             } errorCallback: { error in
                 if let error = error as? NSError {
-                    if error.domain == ASWebAuthenticationSessionError.errorDomain &&
-                        error.code == ASWebAuthenticationSessionError.Code.canceledLogin.rawValue {
+                    if error.domain == ASWebAuthenticationSessionError.errorDomain,
+                       error.code == ASWebAuthenticationSessionError.Code.canceledLogin.rawValue {
                         self.nativeSDK.cancelFlow(error: .hostedFlowCanceled)
                         return
                     }

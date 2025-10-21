@@ -10,7 +10,7 @@ struct PasscodeView: View {
 
     let widget: PasscodeWidget
 
-    public var body: some View {
+    var body: some View {
         var error = loginController.errorMessage(formId: formId, widgetId: widgetId) ?? ""
         TextField(
             widget.label,
