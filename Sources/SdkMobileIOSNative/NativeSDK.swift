@@ -5,6 +5,7 @@ public class NativeSDK {
     let clientId: String
     let redirectURI: URL
     let postLogoutURI: URL
+    let mode: SdkMode
 
     var loginController: LoginController?
 
@@ -18,12 +19,14 @@ public class NativeSDK {
         clientId: String,
         redirectURI: URL,
         postLogoutURI: URL,
-        storage: Storage = KeyChain()
+        storage: Storage = KeyChain(),
+        mode: SdkMode = .ios
     ) {
         self.issuer = issuer
         self.clientId = clientId
         self.redirectURI = redirectURI
         self.postLogoutURI = postLogoutURI
+        self.mode = mode
 
         httpService = HttpService()
         oidcHandlerService = OIDCHandlerService(httpService: httpService)
@@ -63,6 +66,7 @@ public class NativeSDK {
             URLQueryItem(name: "acr_values", value: parameters?.acrValue),
             URLQueryItem(name: "login_hint", value: parameters?.loginHint),
             URLQueryItem(name: "prompt", value: parameters?.prompt),
+            URLQueryItem(name: "sdk", value: mode.rawValue),
         ]
 
         guard let url = urlComponents.url else {
@@ -296,4 +300,9 @@ public struct LoginParameters {
     var acrValue: String?
     var scopes: [String]?
     var prefersEphemeralWebBrowserSession: Bool
+}
+
+public enum SdkMode: String {
+    case ios
+    case iosMinimal = "ios-minimal"
 }

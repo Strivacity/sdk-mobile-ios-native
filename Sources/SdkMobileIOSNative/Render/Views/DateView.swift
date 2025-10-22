@@ -18,7 +18,7 @@ struct DateView: View {
     @State private var isDatePickerVisible: Bool = false
 
     var body: some View {
-        if widget.render.type == "native" {
+        if widget.render?.type == "native" {
             HStack {
                 Text(widget.label ?? "")
                 Spacer()
@@ -71,7 +71,7 @@ struct DateView: View {
                     }
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
-        } else if widget.render.type == "fieldSet" {
+        } else if widget.render?.type == "fieldSet" {
             HStack {
                 Text(widget.label ?? "")
             }

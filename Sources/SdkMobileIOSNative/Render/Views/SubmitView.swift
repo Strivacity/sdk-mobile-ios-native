@@ -40,7 +40,7 @@ struct SubmitView: View {
             }
         } label: { Text(widget.label) }
 
-        switch widget.render.type {
+        switch widget.render?.type {
         case "button":
             button
                 .buttonStyle(.borderedProminent)
