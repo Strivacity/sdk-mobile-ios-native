@@ -6,7 +6,7 @@ struct HtmlTextView: View {
 
     @Binding var htmlContent: String
 
-    public var body: some View {
+    var body: some View {
         ZStack {
             if let attributedString = attributedString {
                 Text(attributedString)

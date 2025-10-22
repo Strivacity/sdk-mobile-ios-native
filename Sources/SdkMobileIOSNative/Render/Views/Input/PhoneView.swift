@@ -9,7 +9,7 @@ struct PhoneView: View {
 
     let widget: PhoneWidget
 
-    public var body: some View {
+    var body: some View {
         var error = loginController.errorMessage(formId: formId, widgetId: widgetId) ?? ""
 
         TextField(

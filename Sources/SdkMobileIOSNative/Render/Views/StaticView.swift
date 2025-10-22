@@ -12,7 +12,7 @@ struct StaticView: View {
 
     @State var htmlContentValue: String = ""
 
-    public var body: some View {
+    var body: some View {
         if widget.render.type == "html" {
             HtmlTextView(htmlContent: $htmlContentValue)
                 .onAppear {

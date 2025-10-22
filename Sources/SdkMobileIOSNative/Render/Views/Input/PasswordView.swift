@@ -11,7 +11,7 @@ struct PasswordWiew: View {
     let widget: PasswordWidget
     @State var isPasswordVisible: Bool = false
 
-    public var body: some View {
+    var body: some View {
         var error = loginController.errorMessage(formId: formId, widgetId: widgetId) ?? ""
 
         HStack {

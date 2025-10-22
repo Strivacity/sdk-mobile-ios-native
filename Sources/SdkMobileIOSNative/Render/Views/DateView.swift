@@ -17,7 +17,7 @@ struct DateView: View {
     @State private var year: String = ""
     @State private var isDatePickerVisible: Bool = false
 
-    public var body: some View {
+    var body: some View {
         if widget.render.type == "native" {
             HStack {
                 Text(widget.label ?? "")
@@ -152,7 +152,7 @@ struct DateView: View {
 
     private func updateDateBinding() {
         var formattedDate: String? = "\(year)-\(month)-\(day)"
-        if year.isEmpty && month.isEmpty && day.isEmpty {
+        if year.isEmpty, month.isEmpty, day.isEmpty {
             formattedDate = nil
         }
         loginController.bindingForWidget(formId: formId, widgetId: widgetId, defaultValue: "")
