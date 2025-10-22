@@ -28,12 +28,12 @@ struct CheckboxView: View {
         @Binding var isOn: Bool
 
         var body: some View {
-            if widget.render.type == "checkboxShown" {
+            if widget.render?.type == "checkboxShown" {
                 Toggle(isOn: $isOn) {
                     Label(widget: widget, htmlContentValue: htmlContentValue)
                 }
                 .toggleStyle(DefaultToggleStyle())
-            } else if widget.render.type == "checkboxHidden" {
+            } else if widget.render?.type == "checkboxHidden" {
                 Toggle(isOn: $isOn) {
                     Label(widget: widget, htmlContentValue: htmlContentValue)
                 }
@@ -52,7 +52,7 @@ struct CheckboxView: View {
 
             var body: some View {
                 Group {
-                    if widget.render.labelType == "html" {
+                    if widget.render?.labelType == "html" {
                         HtmlTextView(htmlContent: $htmlContentValue)
                             .onAppear {
                                 htmlContentValue = widget.label
@@ -60,7 +60,7 @@ struct CheckboxView: View {
                             .onChange(of: widget.label) { label in
                                 htmlContentValue = label
                             }
-                    } else if widget.render.labelType == "text" {
+                    } else if widget.render?.labelType == "text" {
                         Text(widget.label)
                     } else {
                         FallbackTriggerView()

@@ -8,7 +8,7 @@ public struct FormWidget: Decodable, Equatable {
 public struct SubmitWidget: Decodable, Equatable {
     public let id: String
     public let label: String
-    public let render: Render
+    public let render: Render?
 
     public struct Render: Decodable, Equatable {
         public let type: String
@@ -27,7 +27,7 @@ public struct StaticWidget: Decodable, Equatable {
     public let id: String
     public let value: String
 
-    public let render: Render
+    public let render: Render?
 
     public struct Render: Decodable, Equatable {
         public let type: String
@@ -60,7 +60,7 @@ public struct CheckboxWidget: Decodable, Equatable {
     public let readonly: Bool
 
     public let validator: Validator?
-    public let render: Render
+    public let render: Render?
 
     public struct Validator: Decodable, Equatable {
         public let required: Bool
@@ -93,7 +93,7 @@ public struct SelectWidget: Decodable, Equatable {
     public let value: String?
     public let readonly: Bool
 
-    public let render: Render
+    public let render: Render?
     public let options: [Option]
     public let validator: Validator
 
@@ -166,7 +166,7 @@ public struct DateWidget: Decodable, Equatable {
     public let readonly: Bool
     public let value: String?
 
-    public let render: Render
+    public let render: Render?
     public let validator: Validator?
 
     public struct Render: Decodable, Equatable {

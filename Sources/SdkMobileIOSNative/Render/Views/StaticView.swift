@@ -13,7 +13,7 @@ struct StaticView: View {
     @State var htmlContentValue: String = ""
 
     var body: some View {
-        if widget.render.type == "html" {
+        if widget.render?.type == "html" {
             HtmlTextView(htmlContent: $htmlContentValue)
                 .onAppear {
                     htmlContentValue = widget.value
@@ -21,7 +21,7 @@ struct StaticView: View {
                 .onChange(of: widget.value) { value in
                     htmlContentValue = value
                 }
-        } else if widget.render.type == "text" {
+        } else if widget.render?.type == "text" {
             Text(widget.value)
         } else {
             FallbackTriggerView()
