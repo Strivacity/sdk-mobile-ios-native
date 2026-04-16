@@ -10,16 +10,16 @@ public class HeadlessAdapter {
     private var cancellables = Set<AnyCancellable>()
 
     public init(nativeSDK: NativeSDK, delegate: HeadlessAdapterDelegate) {
+        precondition(
+            nativeSDK.loginController != nil,
+            "No login session started. Make sure to call `NativeSDK.login()` first."
+        )
+
         self.nativeSDK = nativeSDK
         self.delegate = delegate
+        loginController = nativeSDK.loginController!
 
-        guard let loginController = nativeSDK.loginController else {
-            assert(false, "No login in progress")
-        }
-
-        self.loginController = loginController
-
-        self.loginController.$screen
+        loginController.$screen
             .sink { [self] _ in
                 let currentScreen = self.getScreen()
                 DispatchQueue.main.async {
@@ -33,11 +33,10 @@ public class HeadlessAdapter {
                         currentScreen.forms == newScreen.forms,
                         currentScreen.layout == newScreen.layout,
                         currentScreen.messages != newScreen.messages {
-                        delegate.refreshScreen(screen: getScreen())
+                        delegate.refreshScreen(screen: newScreen)
                         return
                     }
-
-                    delegate.renderScreen(screen: getScreen())
+                    delegate.renderScreen(screen: newScreen)
                 }
             }
             .store(in: &cancellables)
@@ -48,10 +47,8 @@ public class HeadlessAdapter {
     }
 
     public func getScreen() -> Screen {
-        guard let screen = loginController.screen else {
-            assert(false, "Screen not set")
-        }
-        return screen
+        precondition(loginController.screen != nil, "Expected screen to be available.")
+        return loginController.screen!
     }
 
     public func errorMessage(formId: String, widgetId: String) -> String? {
