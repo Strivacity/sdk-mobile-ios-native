@@ -2,17 +2,19 @@ name: Swift Build and Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
   pull_request:
-    branches: [ "main" ]
-  workflow_dispatch: 
+    branches:
+      - "main"
+  workflow_dispatch:
 
 jobs:
   build:
     name: Swift
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Wait for simulators
         run: xcrun simctl list

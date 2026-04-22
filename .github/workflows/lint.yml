@@ -2,27 +2,28 @@ name: Lint and Format code
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - "main"
 
 permissions:
   contents: read
 
 jobs:
   lint:
-
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v6
+
       - name: Wait for simulators
-        run: xcrun simctl list      
+        run: xcrun simctl list
 
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
+        uses: Homebrew/actions/setup-homebrew@main
 
       - run: brew install swiftlint
 
@@ -31,5 +32,5 @@ jobs:
       - run: swiftlint lint .
 
       - run: swiftformat --lint .
-      
+
       - run: .github/workflows/unused-variables.sh
