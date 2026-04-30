@@ -80,6 +80,10 @@ class OIDCHandlerService {
         )
 
         if response.httpResponse.statusCode != 200 {
+            if response.httpResponse.statusCode == 400,
+               let envelope = try? ErrorEnvelope(from: response.data) {
+                throw NativeSDKError.oidcError(error: envelope.error, errorDescription: envelope.errorDescription)
+            }
             throw NativeSDKError.httpError(statusCode: response.httpResponse.statusCode)
         }
 

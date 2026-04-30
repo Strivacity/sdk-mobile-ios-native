@@ -207,7 +207,7 @@ public class NativeSDK {
 
                 guard case 200 ..< 400 = statusCode else {
                     if statusCode == 400 {
-                        let decodedError = try JSONDecoder().decode(EntryErrorEnvelope.self, from: response.data)
+                        let decodedError = try JSONDecoder().decode(ErrorEnvelope.self, from: response.data)
                         throw NativeSDKError.workflowError(
                             error: decodedError.error,
                             errorDescription: decodedError.errorDescription
@@ -505,12 +505,18 @@ public class NativeSDK {
             logging.info("Session refreshed successfully")
             return
         } catch let error as NativeSDKError {
+            if case let .oidcError(err, _) = error {
+                logging.warn("Token refresh failed with error: \(err), clearing session")
+                await session.clear()
+                return
+            }
+
             guard case let .httpError(statusCode) = error else {
                 logging.error("Token refresh failed", error: error)
                 throw error
             }
 
-            if statusCode == 400 || statusCode == 401 || statusCode == 403 {
+            if statusCode == 401 || statusCode == 403 {
                 logging.warn("Token refresh failed with status \(statusCode), clearing session")
                 await session.clear()
                 return
@@ -526,16 +532,6 @@ public class NativeSDK {
     private func cleanup() {
         session.loginInProgress = false
         loginController = nil
-    }
-
-    private struct EntryErrorEnvelope: Decodable {
-        let error: String
-        let errorDescription: String?
-
-        private enum CodingKeys: String, CodingKey {
-            case error
-            case errorDescription = "error_description"
-        }
     }
 }
 
