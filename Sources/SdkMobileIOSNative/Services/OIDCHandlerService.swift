@@ -79,11 +79,10 @@ class OIDCHandlerService {
             contentType: "application/x-www-form-urlencoded"
         )
 
-        if response.httpResponse.statusCode != 200 {
-            if response.httpResponse.statusCode == 400,
-               let envelope = try? ErrorEnvelope(from: response.data) {
-                throw NativeSDKError.oidcError(error: envelope.error, errorDescription: envelope.errorDescription)
-            }
+        if response.httpResponse.statusCode == 400,
+           let envelope = try? ErrorEnvelope(from: response.data) {
+            throw NativeSDKError.oidcError(error: envelope.error, errorDescription: envelope.errorDescription)
+        } else if response.httpResponse.statusCode != 200 {
             throw NativeSDKError.httpError(statusCode: response.httpResponse.statusCode)
         }
 

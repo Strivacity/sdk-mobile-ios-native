@@ -505,8 +505,11 @@ public class NativeSDK {
             logging.info("Session refreshed successfully")
             return
         } catch let error as NativeSDKError {
-            if case let .oidcError(err, _) = error {
-                logging.warn("Token refresh failed with error: \(err), clearing session")
+            if case let .oidcError(err, description) = error {
+                logging
+                    .warn(
+                        "Token refresh failed with error: \(err) and description \"\(description ?? "")\", clearing session"
+                    )
                 await session.clear()
                 return
             }
