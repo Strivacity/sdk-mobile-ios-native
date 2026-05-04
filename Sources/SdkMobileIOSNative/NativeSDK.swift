@@ -39,9 +39,9 @@ public class NativeSDK {
         session = Session(storage: storage, logging: logging)
     }
 
-    public func initializeSession() async {
+    public func initializeSession() async throws {
         await session.load()
-        await refreshTokensIfNeeded()
+        try await refreshTokensIfNeeded()
     }
 
     public func login(
@@ -207,7 +207,7 @@ public class NativeSDK {
 
                 guard case 200 ..< 400 = statusCode else {
                     if statusCode == 400 {
-                        let decodedError = try JSONDecoder().decode(EntryErrorEnvelope.self, from: response.data)
+                        let decodedError = try JSONDecoder().decode(ErrorEnvelope.self, from: response.data)
                         throw NativeSDKError.workflowError(
                             error: decodedError.error,
                             errorDescription: decodedError.errorDescription
@@ -386,13 +386,13 @@ public class NativeSDK {
         await session.clear()
     }
 
-    public func isAuthenticated() async -> Bool {
-        await refreshTokensIfNeeded()
+    public func isAuthenticated() async throws -> Bool {
+        try await refreshTokensIfNeeded()
         return session.profile != nil
     }
 
-    public func getAccessToken() async -> String? {
-        await refreshTokensIfNeeded()
+    public func getAccessToken() async throws -> String? {
+        try await refreshTokensIfNeeded()
         return session.profile?.tokenResponse.accessToken
     }
 
@@ -476,7 +476,7 @@ public class NativeSDK {
         }
     }
 
-    private func refreshTokensIfNeeded() async {
+    private func refreshTokensIfNeeded() async throws {
         logging.debug("Attempting to refresh token")
 
         guard let profile = session.profile else {
@@ -504,25 +504,37 @@ public class NativeSDK {
             try await session.update(tokenResponse: refreshResponse)
             logging.info("Session refreshed successfully")
             return
+        } catch let error as NativeSDKError {
+            if case let .oidcError(err, description) = error {
+                logging
+                    .warn(
+                        "Token refresh failed with error: \(err) and description \"\(description ?? "")\", clearing session"
+                    )
+                await session.clear()
+                return
+            }
+
+            guard case let .httpError(statusCode) = error else {
+                logging.error("Token refresh failed", error: error)
+                throw error
+            }
+
+            if statusCode == 401 || statusCode == 403 {
+                logging.warn("Token refresh failed with status \(statusCode), clearing session")
+                await session.clear()
+                return
+            }
+            logging.error("Token refresh failed with status \(statusCode)", error: error)
+            throw error
         } catch {
-            logging.debug("Could not refresh session due to error: \(error.localizedDescription)")
-            await session.clear()
+            logging.error("Token refresh failed", error: error)
+            throw error
         }
     }
 
     private func cleanup() {
         session.loginInProgress = false
         loginController = nil
-    }
-
-    private struct EntryErrorEnvelope: Decodable {
-        let error: String
-        let errorDescription: String?
-
-        private enum CodingKeys: String, CodingKey {
-            case error
-            case errorDescription = "error_description"
-        }
     }
 }
 
