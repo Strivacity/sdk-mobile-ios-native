@@ -7,6 +7,7 @@ public class NativeSDK {
     let postLogoutURI: URL
     let mode: SdkMode
     let logging: Logging
+    let networkConfiguration: NetworkConfiguration
 
     var loginController: LoginController?
 
@@ -24,7 +25,8 @@ public class NativeSDK {
         postLogoutURI: URL,
         storage: Storage = KeyChain(),
         mode: SdkMode = .ios,
-        logging: Logging = DefaultLogging()
+        logging: Logging = DefaultLogging(),
+        networkConfiguration: NetworkConfiguration = NetworkConfiguration()
     ) {
         self.issuer = issuer
         self.clientId = clientId
@@ -32,8 +34,9 @@ public class NativeSDK {
         self.postLogoutURI = postLogoutURI
         self.mode = mode
         self.logging = logging
+        self.networkConfiguration = networkConfiguration
 
-        httpService = HttpService(logging: logging)
+        httpService = HttpService(logging: logging, networkConfiguration: networkConfiguration)
         oidcHandlerService = OIDCHandlerService(httpService: httpService, logging: logging)
 
         session = Session(storage: storage, logging: logging)
@@ -571,5 +574,66 @@ public enum SdkMode: String {
 extension Array {
     var nilIfEmpty: [Element]? {
         isEmpty ? nil : self
+    }
+}
+
+/// Static configuration for the network communication layer of the SDK.
+///
+/// - Parameters:
+///   - userAgent: The User-Agent header value sent with every network request. Defaults to
+///     Platform default User Agent. Must be at least 3 characters after trimming; a precondition
+///     failure is thrown at construction time otherwise.
+///   - customRequestHeaders: Additional HTTP headers included in every network request. Every
+///     key must be a `CustomHeaderFieldName`: it must start with the `x-sty-` prefix, be entirely
+///     lowercase, and not be equal to the bare prefix `"x-sty-"` — all three rules are enforced at
+///     construction time and a precondition failure is thrown on violation. Headers with the
+///     `x-sty-` prefix are available in server-side event Hooks on the backend. Defaults to an empty
+///     dictionary.
+public struct NetworkConfiguration {
+    let userAgent: String?
+    var customRequestHeaders: [CustomHeaderFieldName: String]
+
+    public init(
+        userAgent: String? = nil,
+        customRequestHeaders: [CustomHeaderFieldName: String] = [:]
+    ) {
+        precondition(
+            userAgent == nil || userAgent!.trimmingCharacters(in: .whitespacesAndNewlines).count
+                >= 3,
+            "User agent must be at least 3 characters"
+        )
+
+        precondition(
+            customRequestHeaders.keys.allSatisfy { $0.lowercased() == $0 },
+            "Custom request headers must be defined with lowercase. eg. `x-sty-my-header`"
+        )
+
+        precondition(
+            customRequestHeaders.keys.allSatisfy { $0.starts(with: "x-sty-") },
+            "Custom request headers must start with `x-sty-` prefix."
+        )
+
+        precondition(
+            customRequestHeaders.keys.firstIndex(of: "x-sty-") == nil,
+            "Cannot add \"x-sty-\" header as it is a reserved header prefix."
+        )
+
+        self.userAgent = userAgent
+        self.customRequestHeaders = customRequestHeaders
+    }
+
+    public typealias CustomHeaderFieldName = String
+}
+
+public extension NetworkConfiguration {
+    /// Returns a copy of this `NetworkConfiguration` with the `x-sty-sdk-version` custom header set to
+    /// the current `SDKVersion`. Useful for correlating server-side Hook events with a specific SDK
+    /// release.
+    mutating func addSdkVersionCustomHeader() -> NetworkConfiguration {
+        customRequestHeaders = customRequestHeaders.merging([
+            "x-sty-sdk-version": SDKVersion,
+        ]) { _, new in new }
+
+        return self
     }
 }
