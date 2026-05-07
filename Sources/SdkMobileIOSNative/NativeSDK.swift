@@ -622,6 +622,14 @@ public struct NetworkConfiguration {
         self.customRequestHeaders = customRequestHeaders
     }
 
+    /// A header field name that must comply with all of the following rules:
+    /// - starts with the `x-sty-` prefix (e.g. `x-sty-my-header`)
+    /// - is entirely lowercase
+    /// - is not equal to the bare prefix `"x-sty-"` (i.e. must have at least one character after the prefix)
+    ///
+    /// Headers using this convention are appended to every network request towards the Strivacity
+    /// server. Because of the `x-sty-` prefix they are forwarded to and available in server-side event
+    /// Hooks on the backend.
     public typealias CustomHeaderFieldName = String
 }
 
