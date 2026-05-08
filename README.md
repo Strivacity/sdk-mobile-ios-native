@@ -45,6 +45,49 @@ let nativeSDK = NativeSDK(
 let session = nativeSDK.session                             // store the session to interact with the current account session
 ```
 
+### Network Configuration
+
+The `NetworkConfiguration` struct controls the HTTP layer of the SDK. All properties are optional and fall back to sensible defaults.
+
+```swift
+NetworkConfiguration(
+    userAgent: String = "strivacity-sdk-ios",          // Value of the User-Agent header sent with every request
+    customRequestHeaders: [String: String] = [:]       // Extra headers appended to every request (keys must start with `x-sty-`)
+)
+```
+
+**`userAgent`** — overrides the `User-Agent` header value. Useful when you need to identify your app alongside the SDK. Must be at least 3 characters after trimming; a `precondition` failure is triggered at construction time otherwise. Defaults to platform's default user agent when value is `nil`.
+
+**`customRequestHeaders`** — additional headers included in every outgoing request. Keys **must** satisfy all of the following rules:
+- prefixed with `x-sty-` (e.g. `x-sty-my-header`)
+- entirely **lowercase**
+- not equal to the bare prefix `"x-sty-"` (i.e. must have at least one character after the prefix)
+
+Violating any of these rules triggers a `precondition` failure at construction time. Headers carrying the `x-sty-` prefix are forwarded to the Strivacity backend and are accessible inside **Hooks**, allowing server-side logic to act on values passed from the mobile app (e.g. app version, feature flags).
+
+#### Adding the SDK version header
+
+The `addSdkVersionCustomHeader()` extension function returns a copy of `NetworkConfiguration` with the `x-sty-sdk-version` header set to the current SDK version. This header is forwarded to server-side Hooks, making it easy to correlate backend events with a specific SDK release.
+
+```swift
+var networkConfig = NetworkConfiguration()
+networkConfig = networkConfig.addSdkVersionCustomHeader()
+```
+
+> **Note for SDK developers:** The SDK version is sourced from the `SDKVersion` constant defined in `SDKVersion.swift`.
+
+**Example — adding the SDK version and a custom app-version header:**
+
+```swift
+let sdk = NativeSDK(
+    issuer: URL(string: "<issuer-url>")!,
+    clientId: "<client-id>",
+    redirectURI: URL(string: "<redirect-uri>")!,
+    postLogoutURI: URL(string: "<post-logout-uri>")!,
+    networkConfiguration: networkConfig
+)
+```
+
 
 ## Initialize Native SDK
 

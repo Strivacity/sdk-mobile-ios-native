@@ -14,8 +14,11 @@ class HttpService {
 
     private let logging: Logging
 
-    init(logging: Logging) {
+    private let networkConfiguration: NetworkConfiguration
+
+    init(logging: Logging, networkConfiguration: NetworkConfiguration) {
         self.logging = logging
+        self.networkConfiguration = networkConfiguration
         session = URLSession(
             configuration: .default,
             delegate: HttpSessionDelegate(logging: logging),
@@ -72,6 +75,17 @@ class HttpService {
         }
         request.setValue(acceptHeader, forHTTPHeaderField: "Accept")
         request.setValue(Locale.preferredLanguages[0], forHTTPHeaderField: "Accept-Language")
+
+        if let userAgent = networkConfiguration.userAgent {
+            request.setValue(
+                networkConfiguration.userAgent,
+                forHTTPHeaderField: "User-Agent"
+            )
+        }
+
+        for (fieldName, fieldValue) in networkConfiguration.customRequestHeaders {
+            request.setValue(fieldValue, forHTTPHeaderField: fieldName)
+        }
 
         return request
     }
