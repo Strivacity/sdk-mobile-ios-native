@@ -114,6 +114,15 @@ public class NativeSDK {
                 .nilIfEmpty?
                 .joined(separator: " ")
             ),
+            URLQueryItem(
+                name: "ui_locales",
+                value: parameters?.uiLocales?.map {
+                    $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                .filter { !$0.isEmpty }
+                .nilIfEmpty?
+                .joined(separator: " ")
+            ),
         ]
 
         guard let url = urlComponents.url else {
@@ -548,7 +557,8 @@ public struct LoginParameters {
         acrValue: String? = nil,
         scopes: [String]? = nil,
         prefersEphemeralWebBrowserSession: Bool = false,
-        audiences: [String]? = nil
+        audiences: [String]? = nil,
+        uiLocales: [String]? = nil
     ) {
         self.prompt = prompt
         self.loginHint = loginHint
@@ -556,6 +566,7 @@ public struct LoginParameters {
         self.scopes = scopes
         self.prefersEphemeralWebBrowserSession = prefersEphemeralWebBrowserSession
         self.audiences = audiences
+        self.uiLocales = uiLocales
     }
 
     let prompt: String?
@@ -564,6 +575,9 @@ public struct LoginParameters {
     let scopes: [String]?
     let prefersEphemeralWebBrowserSession: Bool
     let audiences: [String]?
+    /// Preferred languages to display the UI on
+    /// Consists of BCP47 encoded language tags eg. de-AT
+    let uiLocales: [String]?
 }
 
 public enum SdkMode: String {
