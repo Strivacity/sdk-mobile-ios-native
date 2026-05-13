@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 struct HttpResponse {
     let httpResponse: HTTPURLResponse
@@ -15,6 +16,9 @@ class HttpService {
     private let logging: Logging
 
     private let networkConfiguration: NetworkConfiguration
+
+    private let languageLock = NSRecursiveLock()
+    private var languageTag: String = Locale.preferredLanguages.first ?? Locale.current.identifier.bcp47
 
     init(logging: Logging, networkConfiguration: NetworkConfiguration) {
         self.logging = logging
@@ -67,6 +71,12 @@ class HttpService {
         return try await dataExchange(request: request)
     }
 
+    func setAcceptLanguageHeader(languageTag: String) {
+        languageLock.withLock {
+            self.languageTag = languageTag
+        }
+    }
+
     private func createRequest(url: URL, method: HttpMethod, acceptHeader: String, contentType: String?) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
@@ -74,7 +84,8 @@ class HttpService {
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         }
         request.setValue(acceptHeader, forHTTPHeaderField: "Accept")
-        request.setValue(Locale.preferredLanguages[0], forHTTPHeaderField: "Accept-Language")
+        let languageTag = languageLock.withLock { self.languageTag }
+        request.setValue(languageTag, forHTTPHeaderField: "Accept-Language")
 
         if let userAgent = networkConfiguration.userAgent {
             request.setValue(
@@ -133,5 +144,11 @@ class HttpService {
                 completionHandler(nil)
             }
         }
+    }
+}
+
+private extension String {
+    var bcp47: String {
+        replacingOccurrences(of: "_", with: "-")
     }
 }

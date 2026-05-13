@@ -139,6 +139,7 @@ public class NativeSDK {
                 return
             }
             logging.info("Session ID present, creating loginController")
+            applyServerLanguagePreference(parameters: parameters)
 
             let loginHandlerService = LoginHandlerService(
                 httpService: httpService,
@@ -234,6 +235,11 @@ public class NativeSDK {
                 }
 
                 let sessionId = try extractSessionId(fromResponse: response)
+                if let loc = response.httpResponse.value(forHTTPHeaderField: "location"),
+                   let components = URLComponents(string: loc),
+                   let preferredLanguage = components.queryItems?.first { $0.name.lowercased() == "language" }?.value {
+                    applyServerLanguagePreference(preferredLanguageTag: preferredLanguage)
+                }
 
                 // build loginController for sessionId
                 let loginHandlerService = LoginHandlerService(
@@ -293,6 +299,20 @@ public class NativeSDK {
         }
 
         return sessionValue
+    }
+
+    private func applyServerLanguagePreference(parameters: [AnyHashable: Any]) {
+        if let preferredLanguageTag = parameters.first { (key, _) in
+            guard let key = key as? String else { return false }
+            return key.lowercased() == "language"
+        }?.value as? String {
+            applyServerLanguagePreference(preferredLanguageTag: preferredLanguageTag)
+        }
+    }
+
+    private func applyServerLanguagePreference(preferredLanguageTag: String) {
+        logging.info("Setting server language preference: \(preferredLanguageTag)")
+        httpService.setAcceptLanguageHeader(languageTag: preferredLanguageTag)
     }
 
     func closeFlow(throwing: Error? = nil) {
