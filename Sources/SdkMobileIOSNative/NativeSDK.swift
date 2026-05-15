@@ -114,6 +114,15 @@ public class NativeSDK {
                 .nilIfEmpty?
                 .joined(separator: " ")
             ),
+            URLQueryItem(
+                name: "ui_locales",
+                value: parameters?.uiLocales?.map {
+                    $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                .filter { !$0.isEmpty }
+                .nilIfEmpty?
+                .joined(separator: " ")
+            ),
         ]
 
         guard let url = urlComponents.url else {
@@ -130,6 +139,7 @@ public class NativeSDK {
                 return
             }
             logging.info("Session ID present, creating loginController")
+            applyServerLanguagePreference(parameters: parameters)
 
             let loginHandlerService = LoginHandlerService(
                 httpService: httpService,
@@ -225,6 +235,11 @@ public class NativeSDK {
                 }
 
                 let sessionId = try extractSessionId(fromResponse: response)
+                if let loc = response.httpResponse.value(forHTTPHeaderField: "location"),
+                   let components = URLComponents(string: loc),
+                   let preferredLanguage = components.queryItems?.first { $0.name.lowercased() == "language" }?.value {
+                    applyServerLanguagePreference(preferredLanguageTag: preferredLanguage)
+                }
 
                 // build loginController for sessionId
                 let loginHandlerService = LoginHandlerService(
@@ -284,6 +299,20 @@ public class NativeSDK {
         }
 
         return sessionValue
+    }
+
+    private func applyServerLanguagePreference(parameters: [AnyHashable: Any]) {
+        if let preferredLanguageTag = parameters.first { (key, _) in
+            guard let key = key as? String else { return false }
+            return key.lowercased() == "language"
+        }?.value as? String {
+            applyServerLanguagePreference(preferredLanguageTag: preferredLanguageTag)
+        }
+    }
+
+    private func applyServerLanguagePreference(preferredLanguageTag: String) {
+        logging.info("Setting server language preference: \(preferredLanguageTag)")
+        httpService.setAcceptLanguageHeader(languageTag: preferredLanguageTag)
     }
 
     func closeFlow(throwing: Error? = nil) {
@@ -548,7 +577,8 @@ public struct LoginParameters {
         acrValue: String? = nil,
         scopes: [String]? = nil,
         prefersEphemeralWebBrowserSession: Bool = false,
-        audiences: [String]? = nil
+        audiences: [String]? = nil,
+        uiLocales: [String]? = nil
     ) {
         self.prompt = prompt
         self.loginHint = loginHint
@@ -556,6 +586,7 @@ public struct LoginParameters {
         self.scopes = scopes
         self.prefersEphemeralWebBrowserSession = prefersEphemeralWebBrowserSession
         self.audiences = audiences
+        self.uiLocales = uiLocales
     }
 
     let prompt: String?
@@ -564,6 +595,9 @@ public struct LoginParameters {
     let scopes: [String]?
     let prefersEphemeralWebBrowserSession: Bool
     let audiences: [String]?
+    /// Preferred languages to display the UI on
+    /// Consists of BCP47 encoded language tags eg. de-AT
+    let uiLocales: [String]?
 }
 
 public enum SdkMode: String {
