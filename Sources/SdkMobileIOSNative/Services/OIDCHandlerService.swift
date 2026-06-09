@@ -120,22 +120,25 @@ struct OidcParams {
     init(
         onSuccess: @escaping () -> Void,
         onError: @escaping (Error) -> Void,
-        prefersEphemeralWebBrowserSession: Bool
+        prefersEphemeralWebBrowserSession: Bool,
+        shouldVerifyIdTokenClaims: Bool
     ) {
         codeVerifier = OIDCParamGenerator.generateCodeVerifier()
         codeChallenge = OIDCParamGenerator.generateCodeChallenge(from: codeVerifier)
         state = OIDCParamGenerator.generateState()
-        nonce = OIDCParamGenerator.generateNonce()
+        nonce = shouldVerifyIdTokenClaims ? OIDCParamGenerator.generateNonce() : nil
 
         self.onSuccess = onSuccess
         self.onError = onError
         self.prefersEphemeralWebBrowserSession = prefersEphemeralWebBrowserSession
+        self.shouldVerifyIdTokenClaims = shouldVerifyIdTokenClaims
     }
 
     let codeVerifier: String
     let codeChallenge: String
     let state: String
-    let nonce: String
+    let nonce: String?
+    let shouldVerifyIdTokenClaims: Bool
 
     let onSuccess: () -> Void
     let onError: (Error) -> Void
@@ -247,7 +250,7 @@ struct TokenResponse: Codable {
     }
 
     var accessToken: String
-    var idToken: String
+    var idToken: String?
     var expiresIn: Int
     var refreshToken: String?
 }
