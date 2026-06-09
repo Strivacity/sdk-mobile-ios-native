@@ -378,7 +378,7 @@ public class NativeSDK {
         await session.clear()
 
         guard let idToken = idToken else {
-            logging.debug("Logout called without session")
+            logging.debug("User logged out (no id_token_hint available)")
             return
         }
 
