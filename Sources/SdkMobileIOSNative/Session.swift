@@ -64,7 +64,11 @@ public struct Profile: Codable {
         self.tokenResponse = tokenResponse
         accessTokenExpiresAt = Date(timeIntervalSinceNow: Double(tokenResponse.expiresIn))
 
-        claims = try JWTUtils.parseJWT(tokenResponse.idToken)
+        if let idToken = tokenResponse.idToken {
+            claims = try JWTUtils.parseJWT(idToken)
+        } else {
+            claims = [:]
+        }
     }
 
     public init(from decoder: any Decoder) throws {
@@ -72,6 +76,10 @@ public struct Profile: Codable {
         tokenResponse = try container.decode(TokenResponse.self, forKey: .tokenResponse)
         accessTokenExpiresAt = try container.decode(Date.self, forKey: .accessTokenExpiresAt)
 
-        claims = try JWTUtils.parseJWT(tokenResponse.idToken)
+        if let idToken = tokenResponse.idToken {
+            claims = try JWTUtils.parseJWT(idToken)
+        } else {
+            claims = [:]
+        }
     }
 }

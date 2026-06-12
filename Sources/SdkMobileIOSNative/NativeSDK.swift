@@ -71,14 +71,18 @@ public class NativeSDK {
         onError: @escaping (Error) -> Void
     ) async {
         logging.info("Starting login flow")
-        let oidcParams = OidcParams(
-            onSuccess: onSuccess,
-            onError: onError,
-            prefersEphemeralWebBrowserSession: parameters?.prefersEphemeralWebBrowserSession ?? false
-        )
 
         let authEndpoint = issuer.appendingPathComponent("/oauth2/auth")
         var urlComponents = URLComponents(url: authEndpoint, resolvingAgainstBaseURL: false)!
+
+        let scopes = (parameters?.scopes ?? ["openid", "profile"])
+        let wasIdTokenRequested = scopes.contains("openid")
+        let oidcParams = OidcParams(
+            onSuccess: onSuccess,
+            onError: onError,
+            prefersEphemeralWebBrowserSession: parameters?.prefersEphemeralWebBrowserSession ?? false,
+            shouldVerifyIdTokenClaims: wasIdTokenRequested
+        )
 
         urlComponents.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
@@ -88,7 +92,6 @@ public class NativeSDK {
                 value: redirectURI.absoluteString
             ),
             URLQueryItem(name: "state", value: oidcParams.state),
-            URLQueryItem(name: "nonce", value: oidcParams.nonce),
             URLQueryItem(
                 name: "code_challenge",
                 value: oidcParams.codeChallenge
@@ -97,7 +100,7 @@ public class NativeSDK {
 
             URLQueryItem(
                 name: "scope",
-                value: (parameters?.scopes ?? ["openid", "profile"]).joined(
+                value: scopes.joined(
                     separator: " "
                 )
             ),
@@ -124,6 +127,10 @@ public class NativeSDK {
                 .joined(separator: " ")
             ),
         ]
+
+        if wasIdTokenRequested {
+            urlComponents.queryItems?.append(URLQueryItem(name: "nonce", value: oidcParams.nonce))
+        }
 
         guard let url = urlComponents.url else {
             onError(NativeSDKError.technical(message: "Unable to generate /auth url"))
@@ -260,7 +267,8 @@ public class NativeSDK {
                             self.closeFlow(throwing: err)
 
                         },
-                        prefersEphemeralWebBrowserSession: false
+                        prefersEphemeralWebBrowserSession: false,
+                        shouldVerifyIdTokenClaims: false
                     ),
                     logging: logging
                 )
@@ -370,7 +378,7 @@ public class NativeSDK {
         await session.clear()
 
         guard let idToken = idToken else {
-            logging.debug("Logout called without session")
+            logging.debug("User logged out (no id_token_hint available)")
             return
         }
 
@@ -489,13 +497,18 @@ public class NativeSDK {
             )
         )
 
-        guard let nonce = try JWTUtils.parseJWT(tokenResponse.idToken)["nonce"] as? String else {
-            throw NativeSDKError.technical(message: "Nonce missing from response")
-        }
+        if oidcParams.shouldVerifyIdTokenClaims {
+            guard let idToken = tokenResponse.idToken else {
+                throw NativeSDKError.technical(message: "ID Token expected but was not returned")
+            }
+            guard let nonce = try JWTUtils.parseJWT(idToken)["nonce"] as? String else {
+                throw NativeSDKError.technical(message: "Nonce missing from response")
+            }
 
-        guard nonce == oidcParams.nonce else {
-            logging.debug("Nonce param did not match expected value")
-            throw NativeSDKError.technical(message: "Nonce param did not matched expected value")
+            guard nonce == oidcParams.nonce else {
+                logging.debug("Nonce param did not match expected value")
+                throw NativeSDKError.technical(message: "Nonce param did not matched expected value")
+            }
         }
 
         try await session.update(tokenResponse: tokenResponse)
