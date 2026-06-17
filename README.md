@@ -105,11 +105,34 @@ VStack {
 }
 .onAppear {
     Task {
-        try await nativeSDK.initializeSession()
+        do {
+            try await nativeSDK.initializeSession()
+        } catch let NativeSDKError.oidcError(error: error, errorDescription: errorDescription) {
+            // The stored session was invalidated server-side (e.g. admin deleted the session).
+            // The local session has already been cleared by the SDK.
+            // Prompt the user to log in again.
+        } catch let NativeSDKError.httpError(statusCode: statusCode) {
+            // An unexpected HTTP status was returned by the token endpoint (e.g. 5xx).
+            // Show a generic server error message or offer a retry.
+        } catch is NativeSDKError {
+            // An internal SDK error occurred (e.g. Keychain write failure, malformed token).
+            // This is not recoverable; log the error and show a generic error message.
+        } catch {
+            // A network-level error occurred (e.g. no connectivity, timeout).
+            // Show a connectivity error message and offer a retry.
+        }
         loading = false
     }
 }
 ```
+
+> **Note:** Any method that internally triggers a token refresh — `initializeSession`, `getAccessToken`, and `isAuthenticated` — may throw if the refresh fails. The following errors may be surfaced:
+> - `NativeSDKError.oidcError` — the server rejected the refresh token (e.g. `invalid_grant` because an admin invalidated the session). The local session is cleared before the error is thrown; the app should direct the user to log in again.
+> - `NativeSDKError.httpError` — the token endpoint returned an unexpected HTTP status (e.g. 5xx). The session is left intact.
+> - `NativeSDKError` (other) — an internal failure such as a Keychain write error or a malformed token. Not user-recoverable.
+> - `URLError` / other — a transport-level failure (no connectivity, timeout). The session is left intact; a retry is appropriate.
+>
+> When no session exists, the token has not expired, or the server responds with 401/403, these methods return normally without throwing — `session.profile` will be `nil` in those cases.
 
 ## Integrate into your view
 
@@ -420,6 +443,8 @@ The access token can be retrieved using the `getAccessToken` method on the `nati
 
 To validate if the current session's access token is still valid, the `isAuthenticated` method can be called on the `nativeSDK` instance. This call will also try to refresh the access token, if possible.
 
+Because both methods may trigger a token refresh internally, they can throw the same errors as `initializeSession` — see [Initialize Native SDK](#initialize-native-sdk) for the full list.
+
 To trigger a logout the `logout` method can be called on the `nativeSDK` instance.
 
 Example for using the methods above:
@@ -432,7 +457,7 @@ if let accessToken = accessToken {
 } else {
     Button("Get access token") {
         Task {
-            accessToken = try? await nativeSDK.getAccessToken()
+            accessToken = try? await nativeSDK.getAccessToken() // errors suppressed for brevity — see Initialize Native SDK for error handling
         }
     }
 }
@@ -466,3 +491,4 @@ Strivacity is available under the Apache License, Version 2.0. See the [LICENSE]
 
 The [Guidelines for responsible disclosure](https://www.strivacity.com/report-a-security-issue) details the procedure for disclosing security issues.
 Please do not report security vulnerabilities on the public issue tracker.
+    

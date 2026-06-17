@@ -552,11 +552,12 @@ public class NativeSDK {
         } catch let error as NativeSDKError {
             if case let .oidcError(err, description) = error {
                 logging
-                    .warn(
-                        "Token refresh failed with error: \(err) and description \"\(description ?? "")\", clearing session"
+                    .error(
+                        "Token refresh failed — error: \(err), description: \"\(description ?? "")\", session cleared",
+                        error: error
                     )
                 await session.clear()
-                return
+                throw error
             }
 
             guard case let .httpError(statusCode) = error else {
