@@ -4,7 +4,6 @@ import SwiftUI
 struct DateView: View {
     // periphery:ignore
     let screen: String
-    // periphery:ignore
     let formId: String
     let widgetId: String
 

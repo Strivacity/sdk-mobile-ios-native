@@ -7,6 +7,7 @@ public class NativeSDK {
     let postLogoutURI: URL
     let mode: SdkMode
     let logging: Logging
+    // periphery:ignore
     let networkConfiguration: NetworkConfiguration
 
     var loginController: LoginController?

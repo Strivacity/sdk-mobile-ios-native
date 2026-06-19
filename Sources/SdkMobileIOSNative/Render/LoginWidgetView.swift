@@ -3,14 +3,10 @@ import SwiftUI
 
 public struct LoginWidgetView: View {
     @EnvironmentObject var loginController: LoginController
-    // periphery:ignore
     let screen: String
-    // periphery:ignore
     let formId: String
-    // periphery:ignore
     let widgetId: String
 
-    // periphery:ignore
     let widget: Widget
 
     public init(screen: String, formId: String, widgetId: String, widget: Widget) {

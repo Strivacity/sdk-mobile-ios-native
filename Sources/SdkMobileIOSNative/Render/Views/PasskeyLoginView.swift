@@ -12,7 +12,6 @@ struct PasskeyLoginView: View {
     // periphery:ignore
     let screen: String
     let formId: String
-    // periphery:ignore
     let widgetId: String
 
     let widget: PasskeyLoginWidget
