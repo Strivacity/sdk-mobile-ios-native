@@ -21,10 +21,6 @@ jobs:
       - name: Wait for simulators
         run: xcrun simctl list
 
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@main
-
       - run: brew install swiftlint
 
       - run: brew install peripheryapp/periphery/periphery
