@@ -10,7 +10,6 @@ struct PasskeyEnrollView: View {
     // periphery:ignore
     let screen: String
     let formId: String
-    // periphery:ignore
     let widgetId: String
 
     let widget: PasskeyEnrollWidget

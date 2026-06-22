@@ -1,0 +1,35 @@
+name: PR check
+description: "Validate if PR is mergeable"
+
+inputs:
+  GITHUB_TOKEN:
+    description: Github token
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: No merge commits
+      id: no-merge
+      uses: NexusPHP/no-merge-commits@v2.3.0
+      with:
+        token: ${{ inputs.GITHUB_TOKEN }}
+      continue-on-error: true
+
+    - uses: LouisBrunner/checks-action@v3
+      with:
+        token: ${{ inputs.GITHUB_TOKEN }}
+        name: No merge commit
+        conclusion: ${{ steps.no-merge.outcome }}
+
+    - name: No fixup commits
+      id: no-fixup
+      uses: 13rac1/block-fixup-merge-action@v2.0.0
+      continue-on-error: true
+
+    - uses: LouisBrunner/checks-action@v3
+      with:
+        token: ${{ inputs.GITHUB_TOKEN }}
+        name: No fixup commit
+        conclusion: ${{ steps.no-fixup.outcome }}
+
