@@ -32,7 +32,7 @@ class HttpService {
 
     func get(url: URL, acceptHeader: String = "application/json") async throws -> HttpResponse {
         let request = createRequest(url: url, method: HttpMethod.GET, acceptHeader: acceptHeader, contentType: nil)
-        return try await dataExchange(request: request)
+        return try await exchangeDataWithCustomHeaders(request: request)
     }
 
     func post(
@@ -68,7 +68,7 @@ class HttpService {
         }
         request.httpBody = bodyContent
 
-        return try await dataExchange(request: request)
+        return try await exchangeDataWithCustomHeaders(request: request)
     }
 
     func setAcceptLanguageHeader(languageTag: String) {
@@ -87,25 +87,27 @@ class HttpService {
         let languageTag = languageLock.withLock { self.languageTag }
         request.setValue(languageTag, forHTTPHeaderField: "Accept-Language")
 
-        if let userAgent = networkConfiguration.userAgent {
-            request.setValue(
-                networkConfiguration.userAgent,
-                forHTTPHeaderField: "User-Agent"
-            )
-        }
-
-        for (fieldName, fieldValue) in networkConfiguration.customRequestHeaders {
-            request.setValue(fieldValue, forHTTPHeaderField: fieldName)
-        }
-
         return request
     }
 
-    private func dataExchange(request: URLRequest) async throws -> HttpResponse {
+    private func exchangeDataWithCustomHeaders(request: URLRequest) async throws -> HttpResponse {
+        // shadow immutable param with mutable variant
+        var request = request
         logging
             .debug(
                 "REQUEST [\(request.httpMethod ?? "")]: \(request.url?.path ?? "")"
             )
+        await networkConfiguration.customRequestHeaderProvider?(
+            request.url!,
+            request.httpMethod!,
+            request.httpBody
+        ).forEach { fieldName, value in
+            if request.value(forHTTPHeaderField: fieldName) != nil {
+                logging.debug("Dropped custom header as it conflicts with SDK set header: \(fieldName)")
+                return
+            }
+            request.setValue(value, forHTTPHeaderField: fieldName)
+        }
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NativeSDKError.httpError(statusCode: -1)
