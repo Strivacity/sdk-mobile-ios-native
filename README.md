@@ -47,38 +47,82 @@ let session = nativeSDK.session                             // store the session
 
 ### Network Configuration
 
-The `NetworkConfiguration` struct controls the HTTP layer of the SDK. All properties are optional and fall back to sensible defaults.
+The `NetworkConfiguration` struct controls the HTTP layer of the SDK.
 
 ```swift
 NetworkConfiguration(
-    userAgent: String = "strivacity-sdk-ios",          // Value of the User-Agent header sent with every request
-    customRequestHeaders: [String: String] = [:]       // Extra headers appended to every request (keys must start with `x-sty-`)
+    customRequestHeaderProvider: CustomRequestHeaderProvider? = nil
 )
 ```
 
-**`userAgent`** — overrides the `User-Agent` header value. Useful when you need to identify your app alongside the SDK. Must be at least 3 characters after trimming; a `precondition` failure is triggered at construction time otherwise. Defaults to platform's default user agent when value is `nil`.
+> **Migration note:** The older `init(userAgent:customRequestHeaders:)` initializer is deprecated but still available for backward compatibility. See `MIGRATION.md` for before/after examples.
 
-**`customRequestHeaders`** — additional headers included in every outgoing request. Keys **must** satisfy all of the following rules:
-- prefixed with `x-sty-` (e.g. `x-sty-my-header`)
-- entirely **lowercase**
-- not equal to the bare prefix `"x-sty-"` (i.e. must have at least one character after the prefix)
+#### Custom Request Header Provider
 
-Violating any of these rules triggers a `precondition` failure at construction time. Headers carrying the `x-sty-` prefix are forwarded to the Strivacity backend and are accessible inside **Hooks**, allowing server-side logic to act on values passed from the mobile app (e.g. app version, feature flags).
+**`customRequestHeaderProvider`** is an optional callback invoked before every HTTP request made by the SDK. It receives the request URI, HTTP method, and optional request body, and returns a dictionary of headers to include.
+
+```swift
+public typealias CustomRequestHeaderProvider = @Sendable (
+    _ uri: URL,
+    _ method: String,
+    _ requestBody: Data?
+) -> [CustomHeaderFieldName: String]
+```
+
+> **Note:** The provider uses **put-if-absent semantics** — headers returned by the provider are only applied if the SDK has not already set a header with the same name. If a conflict is detected, the header is dropped and a debug log message is emitted.
+
+> **Note:** The callback is invoked only for network requests initiated by the SDK. Requests made outside of it (e.g. by a browser or your own networking code) are not affected.
+
+Headers prefixed with `x-sty-` are forwarded to the Strivacity backend and are accessible inside server-side **Event Hooks**.
+
+With the provider-based initializer, you can also set headers like `User-Agent` by returning them from the callback.
+
+**Example — attaching custom headers:**
+
+```swift
+let networkConfig = NetworkConfiguration(
+    customRequestHeaderProvider: { _, _, _ in
+        [
+            "User-Agent": "my-ios-app/1.2.3",
+            "x-sty-correlation-id": UUID().uuidString
+        ]
+    }
+)
+
+let sdk = NativeSDK(
+    issuer: URL(string: "<issuer-url>")!,
+    clientId: "<client-id>",
+    redirectURI: URL(string: "<redirect-uri>")!,
+    postLogoutURI: URL(string: "<post-logout-uri>")!,
+    networkConfiguration: networkConfig
+)
+```
 
 #### Adding the SDK version header
 
-The `addSdkVersionCustomHeader()` extension function returns a copy of `NetworkConfiguration` with the `x-sty-sdk-version` header set to the current SDK version. This header is forwarded to server-side Hooks, making it easy to correlate backend events with a specific SDK release.
+Use the static `withSdkVersionCustomHeader` provider to include the `x-sty-sdk-version` header (set to the current SDK version) in every request. This header is forwarded to server-side Hooks, making it easy to correlate backend events with a specific SDK release.
 
 ```swift
-var networkConfig = NetworkConfiguration()
-networkConfig = networkConfig.addSdkVersionCustomHeader()
+let networkConfig = NetworkConfiguration(
+    customRequestHeaderProvider: NetworkConfiguration.withSdkVersionCustomHeader
+)
 ```
+
+> **Migration note:** The older mutating `addSdkVersionCustomHeader()` API is deprecated. Prefer `NetworkConfiguration.withSdkVersionCustomHeader`.
 
 > **Note for SDK developers:** The SDK version is sourced from the `SDKVersion` constant defined in `SDKVersion.swift`.
 
-**Example — adding the SDK version and a custom app-version header:**
+**Example — combining the SDK version header with additional custom headers:**
 
 ```swift
+let networkConfig = NetworkConfiguration(
+    customRequestHeaderProvider: { uri, method, body in
+        var headers = NetworkConfiguration.withSdkVersionCustomHeader(uri, method, body)
+        headers["x-sty-app-version"] = "1.2.3"
+        return headers
+    }
+)
+
 let sdk = NativeSDK(
     issuer: URL(string: "<issuer-url>")!,
     clientId: "<client-id>",
@@ -491,4 +535,3 @@ Strivacity is available under the Apache License, Version 2.0. See the [LICENSE]
 
 The [Guidelines for responsible disclosure](https://www.strivacity.com/report-a-security-issue) details the procedure for disclosing security issues.
 Please do not report security vulnerabilities on the public issue tracker.
-    
