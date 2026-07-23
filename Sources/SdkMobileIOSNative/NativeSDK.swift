@@ -245,7 +245,8 @@ public class NativeSDK {
                 let sessionId = try extractSessionId(fromResponse: response)
                 if let loc = response.httpResponse.value(forHTTPHeaderField: "location"),
                    let components = URLComponents(string: loc),
-                   let preferredLanguage = components.queryItems?.first { $0.name.lowercased() == "language" }?.value {
+                   let preferredLanguage = components.queryItems?.first(where: { $0.name.lowercased() == "language" })?
+                   .value {
                     applyServerLanguagePreference(preferredLanguageTag: preferredLanguage)
                 }
 
@@ -311,10 +312,10 @@ public class NativeSDK {
     }
 
     private func applyServerLanguagePreference(parameters: [AnyHashable: Any]) {
-        if let preferredLanguageTag = parameters.first { (key, _) in
+        if let preferredLanguageTag = parameters.first(where: { key, _ in
             guard let key = key as? String else { return false }
             return key.lowercased() == "language"
-        }?.value as? String {
+        })?.value as? String {
             applyServerLanguagePreference(preferredLanguageTag: preferredLanguageTag)
         }
     }

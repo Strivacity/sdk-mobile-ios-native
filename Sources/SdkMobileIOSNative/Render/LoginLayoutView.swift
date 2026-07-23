@@ -33,17 +33,15 @@ public struct LoginLayoutView<WidgetView: View>: View {
     }
 
     public var body: some View {
-        Group {
-            switch layout {
-            case let .horizontal(layout):
-                horizontalLayout(layout)
-            case let .vertical(layout):
-                verticalLayout(layout)
-            case let .widget(layout):
-                widgetLayout(layout)
-            default:
-                FallbackTriggerView()
-            }
+        switch layout {
+        case let .horizontal(layout):
+            horizontalLayout(layout)
+        case let .vertical(layout):
+            verticalLayout(layout)
+        case let .widget(layout):
+            widgetLayout(layout)
+        default:
+            FallbackTriggerView()
         }
     }
 
