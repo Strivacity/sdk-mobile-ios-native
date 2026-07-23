@@ -27,7 +27,7 @@ public class NativeSDK {
         storage: Storage = KeyChain(),
         mode: SdkMode = .ios,
         logging: Logging = DefaultLogging(),
-        networkConfiguration: NetworkConfiguration = NetworkConfiguration()
+        networkConfiguration: NetworkConfiguration = NetworkConfiguration(customRequestHeaderProvider: nil)
     ) {
         self.issuer = issuer
         self.clientId = clientId
@@ -629,23 +629,23 @@ extension Array {
 
 /// Static configuration for the network communication layer of the SDK.
 ///
-/// - Parameters:
-///   - userAgent: The User-Agent header value sent with every network request. Defaults to
-///     Platform default User Agent. Must be at least 3 characters after trimming; a precondition
-///     failure is thrown at construction time otherwise.
-///   - customRequestHeaders: Additional HTTP headers included in every network request. Every
-///     key must be a `CustomHeaderFieldName`: it must start with the `x-sty-` prefix, be entirely
-///     lowercase, and not be equal to the bare prefix `"x-sty-"` — all three rules are enforced at
-///     construction time and a precondition failure is thrown on violation. Headers with the
-///     `x-sty-` prefix are available in server-side event Hooks on the backend. Defaults to an empty
-///     dictionary.
+/// Use the primary initializer `init(customRequestHeaderProvider:)` to supply an optional
+/// callback that produces per-request headers. Headers returned by the provider are applied
+/// using put-if-absent semantics: any header already set by the SDK is preserved and the
+/// provider's value is dropped (with a debug log).
+///
+/// Headers using the `x-sty-` prefix are forwarded to the Strivacity backend and are
+/// accessible inside server-side event Hooks.
+///
+/// The deprecated `init(userAgent:customRequestHeaders:)` is still available for backward
+/// compatibility — see `MIGRATION.md` for upgrade guidance.
 public struct NetworkConfiguration {
-    let userAgent: String?
-    var customRequestHeaders: [CustomHeaderFieldName: String]
+    private(set) var customRequestHeaderProvider: CustomRequestHeaderProvider?
 
+    @available(*, deprecated, message: "Prefer to use init(customRequestHeaderProvider:)")
     public init(
         userAgent: String? = nil,
-        customRequestHeaders: [CustomHeaderFieldName: String] = [:]
+        customRequestHeaders requestHeaders: [CustomHeaderFieldName: String] = [:]
     ) {
         precondition(
             userAgent == nil || userAgent!.trimmingCharacters(in: .whitespacesAndNewlines).count
@@ -654,44 +654,74 @@ public struct NetworkConfiguration {
         )
 
         precondition(
-            customRequestHeaders.keys.allSatisfy { $0.lowercased() == $0 },
+            requestHeaders.keys.allSatisfy { $0.lowercased() == $0 },
             "Custom request headers must be defined with lowercase. eg. `x-sty-my-header`"
         )
 
         precondition(
-            customRequestHeaders.keys.allSatisfy { $0.starts(with: "x-sty-") },
+            requestHeaders.keys.allSatisfy { $0.starts(with: "x-sty-") },
             "Custom request headers must start with `x-sty-` prefix."
         )
 
         precondition(
-            customRequestHeaders.keys.firstIndex(of: "x-sty-") == nil,
+            requestHeaders.keys.firstIndex(of: "x-sty-") == nil,
             "Cannot add \"x-sty-\" header as it is a reserved header prefix."
         )
 
-        self.userAgent = userAgent
-        self.customRequestHeaders = customRequestHeaders
+        var returnedHeaders = requestHeaders
+        if let userAgent {
+            returnedHeaders["User-Agent"] = userAgent
+        }
+        self.init { _, _, _ in
+            returnedHeaders
+        }
     }
 
-    /// A header field name that must comply with all of the following rules:
-    /// - starts with the `x-sty-` prefix (e.g. `x-sty-my-header`)
-    /// - is entirely lowercase
-    /// - is not equal to the bare prefix `"x-sty-"` (i.e. must have at least one character after the prefix)
+    public init(
+        customRequestHeaderProvider: CustomRequestHeaderProvider? = nil
+    ) {
+        self.customRequestHeaderProvider = customRequestHeaderProvider
+    }
+
+    public init() {
+        self.init(customRequestHeaderProvider: nil)
+    }
+
+    /// A header field name.
     ///
-    /// Headers using this convention are appended to every network request towards the Strivacity
-    /// server. Because of the `x-sty-` prefix they are forwarded to and available in server-side event
-    /// Hooks on the backend.
+    /// Headers with the `x-sty-` prefix are forwarded to and available in server-side event
+    /// Hooks on the backend. Other header names are allowed but will not reach event Hooks.
     public typealias CustomHeaderFieldName = String
+
+    public typealias CustomRequestHeaderProvider = @Sendable (
+        _ uri: URL,
+        _ method: String,
+        _ requestBody: Data?
+    ) -> [CustomHeaderFieldName: String]
 }
 
 public extension NetworkConfiguration {
     /// Returns a copy of this `NetworkConfiguration` with the `x-sty-sdk-version` custom header set to
     /// the current `SDKVersion`. Useful for correlating server-side Hook events with a specific SDK
     /// release.
+    @available(*, deprecated, message: "Use withSdkVersionCustomHeader getter instead")
     mutating func addSdkVersionCustomHeader() -> NetworkConfiguration {
-        customRequestHeaders = customRequestHeaders.merging([
-            "x-sty-sdk-version": SDKVersion,
-        ]) { _, new in new }
+        let currentProvider = customRequestHeaderProvider
+        customRequestHeaderProvider = { uri, method, body in
+            var headers = currentProvider?(uri, method, body) ?? [:]
+            headers["x-sty-sdk-version"] = SDKVersion
+            return headers
+        }
 
         return self
+    }
+
+    /// A pre-built ``CustomRequestHeaderProvider`` that attaches the `x-sty-sdk-version` header
+    /// with the current SDK version. Useful for correlating server-side Hook events with a specific
+    /// SDK release.
+    static var withSdkVersionCustomHeader: CustomRequestHeaderProvider {
+        { _, _, _ in
+            ["x-sty-sdk-version": SDKVersion]
+        }
     }
 }
