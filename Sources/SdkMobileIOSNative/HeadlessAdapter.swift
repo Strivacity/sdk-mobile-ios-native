@@ -20,35 +20,39 @@ public class HeadlessAdapter {
         loginController = nativeSDK.loginController!
 
         loginController.$screen
-            .sink { [self] _ in
-                let currentScreen = self.getScreen()
-                DispatchQueue.main.async {
-                    if !nativeSDK.session.loginInProgress {
-                        return
-                    }
+            .compactMap { $0 } // remove nil values
+            .scan((previous: Screen?.none, current: Screen?.none)) { acc, newValue in
+                (previous: acc.current, current: newValue)
+            }
+            .filter { _ in nativeSDK.session.loginInProgress }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] pair in
+                guard let self, let current = pair.current else {
+                    return
+                }
 
-                    let newScreen = self.getScreen()
-                    if
-                        currentScreen.screen == newScreen.screen,
-                        currentScreen.forms == newScreen.forms,
-                        currentScreen.layout == newScreen.layout,
-                        currentScreen.messages != newScreen.messages {
-                        delegate.refreshScreen(screen: newScreen)
-                        return
-                    }
-                    delegate.renderScreen(screen: newScreen)
+                if let previous = pair.previous,
+                   previous.screen == current.screen,
+                   previous.forms == current.forms,
+                   previous.layout == current.layout,
+                   previous.messages != current.messages {
+                    delegate.refreshScreen(screen: current)
+                } else {
+                    delegate.renderScreen(screen: current)
                 }
             }
             .store(in: &cancellables)
     }
 
     public func initialize() {
-        delegate.renderScreen(screen: getScreen())
+        if let screen = loginController.screen {
+            delegate.renderScreen(screen: screen)
+        }
     }
 
-    public func getScreen() -> Screen {
-        precondition(loginController.screen != nil, "Expected screen to be available.")
-        return loginController.screen!
+    @available(*, deprecated, message: "Prefer to use HeadlessAdapterDelegate method parameter")
+    public func getScreen() -> Screen? {
+        return loginController.screen
     }
 
     public func errorMessage(formId: String, widgetId: String) -> String? {

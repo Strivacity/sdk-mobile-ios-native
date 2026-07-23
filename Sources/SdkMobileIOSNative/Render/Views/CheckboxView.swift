@@ -51,20 +51,18 @@ struct CheckboxView: View {
             @State var htmlContentValue: String
 
             var body: some View {
-                Group {
-                    if widget.render?.labelType == "html" {
-                        HtmlTextView(htmlContent: $htmlContentValue)
-                            .onAppear {
-                                htmlContentValue = widget.label
-                            }
-                            .onChange(of: widget.label) { label in
-                                htmlContentValue = label
-                            }
-                    } else if widget.render?.labelType == "text" {
-                        Text(widget.label)
-                    } else {
-                        FallbackTriggerView()
-                    }
+                if widget.render?.labelType == "html" {
+                    HtmlTextView(htmlContent: $htmlContentValue)
+                        .onAppear {
+                            htmlContentValue = widget.label
+                        }
+                        .onChange(of: widget.label) { label in
+                            htmlContentValue = label
+                        }
+                } else if widget.render?.labelType == "text" {
+                    Text(widget.label)
+                } else {
+                    FallbackTriggerView()
                 }
             }
         }

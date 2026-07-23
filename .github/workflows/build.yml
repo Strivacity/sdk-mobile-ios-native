@@ -19,7 +19,7 @@ jobs:
       - name: Wait for simulators
         run: xcrun simctl list
       - name: Build
-        run: xcodebuild build -scheme SdkMobileIOSNative -sdk "`xcrun --sdk iphonesimulator --show-sdk-path`" -destination "platform=iOS Simulator,arch=arm64,name=iPhone 16"
+        run: xcodebuild build -scheme SdkMobileIOSNative -sdk "`xcrun --sdk iphonesimulator --show-sdk-path`" -destination "platform=iOS Simulator,arch=arm64,name=iPhone 17"
 
       - name: Run tests
-        run: xcodebuild test -scheme SdkMobileIOSNative -sdk "`xcrun --sdk iphonesimulator --show-sdk-path`" -destination "platform=iOS Simulator,arch=arm64,name=iPhone 16"
+        run: xcodebuild test -scheme SdkMobileIOSNative -sdk "`xcrun --sdk iphonesimulator --show-sdk-path`" -destination "platform=iOS Simulator,arch=arm64,name=iPhone 17"
