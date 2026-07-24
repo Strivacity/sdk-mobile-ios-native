@@ -1,6 +1,6 @@
 # Migration Guide
 
-## Migrating to 2.3.0
+## Migrating to 4.2.0
 
 ### `NetworkConfiguration`: `customRequestHeaders` → `customRequestHeaderProvider`
 
