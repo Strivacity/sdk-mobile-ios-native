@@ -1,6 +1,6 @@
 # Migration Guide
 
-## Migrating to 4.2.0
+## Migrating to 5.0.0
 
 ### `NetworkConfiguration`: `customRequestHeaders` → `customRequestHeaderProvider`
 
