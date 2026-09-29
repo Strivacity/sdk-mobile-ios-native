@@ -531,7 +531,10 @@ public class NativeSDK {
             return
         }
 
-        guard Date.now >= profile.accessTokenExpiresAt else {
+        // Fixed amount of time before token's expiry the token should be considered
+        // expired and thus refreshed
+        let expirySkew = -60.0
+        guard Date.now >= profile.accessTokenExpiresAt.addingTimeInterval(expirySkew) else {
             logging.debug("Token refresh not needed - access token has not expired")
             return
         }

@@ -176,7 +176,7 @@ VStack {
 > - `NativeSDKError` (other) — an internal failure such as a Keychain write error or a malformed token. Not user-recoverable.
 > - `URLError` / other — a transport-level failure (no connectivity, timeout). The session is left intact; a retry is appropriate.
 >
-> When no session exists, the token has not expired, or the server responds with 401/403, these methods return normally without throwing — `session.profile` will be `nil` in those cases.
+> The SDK refreshes an access token when it is within 60 seconds of expiry, rather than waiting until it has already expired. When no session exists, the token is not within this refresh window, or the server responds with 401/403, these methods return normally without throwing. If the access token is within the refresh window but no refresh token is available, the local session is cleared and these methods return with `session.profile` set to `nil`.
 
 ## Integrate into your view
 
